@@ -4,9 +4,11 @@ import { normalizeName } from "../utils/foodNames";
 const OFF_API_BASE = "https://world.openfoodfacts.org";
 const OFF_USER_AGENT = "FoodMirror/1.0 (https://github.com/user/foodmirror)";
 
-const REQUEST_TIMEOUT_MS = 8000;
+const REQUEST_TIMEOUT_MS = 15000;
 const SEARCH_RATE_LIMIT_MS = 6500;
 const PRODUCT_RATE_LIMIT_MS = 700;
+const RETRY_BACKOFF_MS = 3000;
+const RETRYABLE_STATUSES = [502, 503, 504];
 
 let lastSearchAt = 0;
 let lastProductAt = 0;
@@ -62,7 +64,12 @@ type OffSearchResponse = {
   products?: OffProduct[];
 };
 
-async function rateLimitedFetch(url: string, minDelayMs: number, lastCallRef: { value: number }): Promise<Response> {
+async function rateLimitedFetch(
+  url: string,
+  minDelayMs: number,
+  lastCallRef: { value: number },
+  isRetry = false,
+): Promise<Response> {
   const now = Date.now();
   const elapsed = now - lastCallRef.value;
   if (elapsed < minDelayMs) {
@@ -73,12 +80,23 @@ async function rateLimitedFetch(url: string, minDelayMs: number, lastCallRef: { 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    return await fetch(url, {
+    const res = await fetch(url, {
       headers: { "User-Agent": OFF_USER_AGENT },
       signal: controller.signal,
     });
-  } finally {
     clearTimeout(timeout);
+    if (!isRetry && RETRYABLE_STATUSES.includes(res.status)) {
+      await new Promise((r) => setTimeout(r, RETRY_BACKOFF_MS));
+      return rateLimitedFetch(url, minDelayMs, lastCallRef, true);
+    }
+    return res;
+  } catch (e) {
+    clearTimeout(timeout);
+    if (!isRetry) {
+      await new Promise((r) => setTimeout(r, RETRY_BACKOFF_MS));
+      return rateLimitedFetch(url, minDelayMs, lastCallRef, true);
+    }
+    throw e;
   }
 }
 

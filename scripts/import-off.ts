@@ -16,6 +16,47 @@ const OFF_API_BASE = "https://world.openfoodfacts.org";
 const USER_AGENT = "FoodMirror-Import/1.0";
 const PAGE_SIZE = 100;
 const RATE_LIMIT_MS = 7000;
+const REQUEST_TIMEOUT_MS = 60000;
+const RETRY_ATTEMPTS = 4;
+const RETRY_BACKOFF_MS = 8000;
+
+const RETRYABLE_STATUSES = [502, 503, 504];
+
+async function fetchWithRetry(url: string): Promise<Response> {
+  let lastRes: Response | null = null;
+  for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": USER_AGENT },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      lastRes = res;
+      if (!RETRYABLE_STATUSES.includes(res.status)) return res;
+      if (attempt < RETRY_ATTEMPTS) {
+        const delay = RETRY_BACKOFF_MS * attempt;
+        console.error(`OFF API ${res.status}, retry ${attempt}/${RETRY_ATTEMPTS} in ${delay / 1000}s`);
+        await new Promise((r) => setTimeout(r, delay));
+      } else {
+        return res;
+      }
+    } catch (e) {
+      clearTimeout(timeout);
+      if (attempt < RETRY_ATTEMPTS) {
+        const delay = RETRY_BACKOFF_MS * attempt;
+        console.error(
+          `OFF API error: ${e instanceof Error ? e.message : String(e)}, retry ${attempt}/${RETRY_ATTEMPTS} in ${delay / 1000}s`,
+        );
+        await new Promise((r) => setTimeout(r, delay));
+      } else {
+        throw e;
+      }
+    }
+  }
+  return lastRes!;
+}
 
 function normalizeName(value: string): string {
   return value
@@ -82,9 +123,7 @@ async function fetchPage(page: number, tag: string): Promise<OffProduct[]> {
     fields: "code,product_name,brands,generic_name,nutriments,completeness",
   });
 
-  const res = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`, {
-    headers: { "User-Agent": USER_AGENT },
-  });
+  const res = await fetchWithRetry(`${OFF_API_BASE}/cgi/search.pl?${params}`);
 
   if (!res.ok) {
     console.error(`OFF API error ${res.status}: ${res.statusText}`);
@@ -108,9 +147,7 @@ async function fetchPageByCategory(page: number, category: string): Promise<OffP
     fields: "code,product_name,brands,generic_name,nutriments,completeness",
   });
 
-  const res = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`, {
-    headers: { "User-Agent": USER_AGENT },
-  });
+  const res = await fetchWithRetry(`${OFF_API_BASE}/cgi/search.pl?${params}`);
 
   if (!res.ok) {
     console.error(`OFF API error ${res.status}: ${res.statusText}`);
