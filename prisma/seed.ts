@@ -69,6 +69,16 @@ async function main() {
     },
   });
 
+  await db.foodSource.upsert({
+    where: { name: "USDA FoodData Central" },
+    update: {},
+    create: {
+      name: "USDA FoodData Central",
+      url: "https://fdc.nal.usda.gov/",
+      notes: "Foundation Foods + SR Legacy, CC0. Заполняется: npm run usda:import или docker compose run --rm usda-import.",
+    },
+  });
+
   const oldSource = await db.foodSource.findFirst({
     where: { name: "Internal reference (approx)" },
   });

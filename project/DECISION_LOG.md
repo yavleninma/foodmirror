@@ -35,6 +35,16 @@
 **Причина:** Кириллица в GitHub Actions / workflow runs отображается сбитой кодировкой (mojibake).
 **Статус:** Действует. Правило в AGENT_RULEBOOK.md (стиль коммитов, чеклист).
 
+### [2026-02-23] Conventional Commits (feat, fix, описание, semver)
+**Решение:** Формат коммитов — Conventional Commits: `type(scope): description`, типы feat, fix, refactor, docs, test, chore, config и др. Полные правила в `project/COMMIT_CONVENTIONS.md`.
+**Причина:** Единый стиль, читаемая история, совместимость с автоматической генерацией CHANGELOG и semver (feat → MINOR, fix → PATCH, BREAKING CHANGE → MAJOR).
+**Статус:** Действует. Ссылка из AGENT_RULEBOOK.md, правило для агента в .cursor/rules/commit-conventions.mdc.
+
+### [2026-02-23] Версия в каждом коммите (footer)
+**Решение:** В каждом коммите в footer указывать строку `Version: x.y.z` — значение из `package.json` на момент коммита.
+**Причина:** В `git log` сразу видно, к какой версии относится коммит.
+**Статус:** Действует. Описано в COMMIT_CONVENTIONS.md, чеклист в AGENT_RULEBOOK.md.
+
 ---
 
 ## Данные

@@ -71,21 +71,25 @@
 3. Убедись что код компилируется (`npm run build`)
 
 ### Стиль коммитов
+Полные правила: **`project/COMMIT_CONVENTIONS.md`** (Conventional Commits, совместимость с semver/CHANGELOG).
+
 - **Сообщения коммитов только на английском** — кириллица в GitHub/CI отображается сбитой кодировкой.
-- Формат: `<type>: <short description>`
-- Типы: feat, fix, refactor, docs, test, chore, config
-- Примеры:
-  - feat: add daily stats comparison
-  - fix: protect unmentioned weights in corrections
-  - refactor: extract override parsing from handlers
-  - docs: update ARCHITECTURE_MAP
-  - config: LLM model only in config, no OPENAI_MODEL in .env
+- Формат: `<type>(<scope>): <description>` или `<type>: <description>`, затем пустая строка и **footer:** строка **`Version: x.y.z`** (значение из `package.json`).
+- Типы: **feat**, **fix**, refactor, docs, test, chore, config, perf, style
+- Subject: императив, без точки в конце, lowercase после двоеточия.
+- Пример:
+  ```
+  feat: add daily stats comparison
+
+  Version: 0.1.4
+  ```
 
 ---
 
 ## Чеклист перед commit
 
 - [ ] Сообщение коммита на английском
+- [ ] В footer коммита строка `Version: x.y.z` из `package.json`
 - [ ] Код компилируется (`npm run build`)
 - [ ] Не добавлены цели/советы/мотивация
 - [ ] Не изменены промпты LLM (если не просили)

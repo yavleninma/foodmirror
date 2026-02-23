@@ -142,6 +142,8 @@ SELECT count(*) FROM "FoodReference";
 SELECT count(*) FROM "MessageEvent" WHERE "createdAt" > now() - interval '1 day';
 ```
 
+**Проверка базы продуктов на проде (аудит справочника):** скрипт `scripts/count-sources.ts` — считает FoodReference и компоненты приёмов по источникам, выводит «проблемные» (LLM / Internal fallback). На проде: `ssh root@157.230.246.177 "cd /opt/foodmirror && docker compose run --rm bot npx tsx scripts/count-sources.ts"`.
+
 ### Metabase (подключение с локальной машины)
 
 Metabase на дроплете **не запускается автоматически** при деплое (экономия RAM). Чтобы открыть дашборд у себя в браузере на `http://localhost:3040`:
@@ -189,10 +191,11 @@ LLM_TIMEOUT_MS=120000
 ```
 
 ### USDA не импортирован (все продукты = "внутренний источник")
+Источник «USDA FoodData Central» создаётся в seed, но **данные** загружаются только импортом. Если в отчёте count-sources по проду USDA = 0 или источника нет — запустить на проде:
 ```bash
-docker compose run --rm usda-import
+ssh root@157.230.246.177 "cd /opt/foodmirror && docker compose run --rm usda-import"
 ```
-Нужен `FDC_API_KEY` в `.env`.
+Нужен `FDC_API_KEY` (или `USDA_API_KEY`) в `.env` на сервере.
 
 ### Бот не отвечает
 ```bash
