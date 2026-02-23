@@ -12,7 +12,7 @@ import { PrismaClient } from "@prisma/client";
  *
  * Запуск: npx tsx scripts/import-calorizator.ts [--clear-calorizator] [--pages=N] [--categories=all|list]
  *   --clear-calorizator — удалить все записи с источником Calorizator перед импортом
- *   --pages=N           — макс. страниц пагинации для /product/all (по умолчанию 50)
+ *   --pages=N           — макс. страниц пагинации для /product/all (по умолчанию 500, до пустой страницы)
  *   --categories=all    — только полный список /product/all (по умолчанию)
  *   --categories=list   — обойти все категории по отдельности (без пагинации по категориям)
  */
@@ -184,7 +184,7 @@ async function main() {
   const args = process.argv.slice(2);
   const clearCalorizator = args.includes("--clear-calorizator");
   const maxPages = parseInt(
-    args.find((a) => a.startsWith("--pages="))?.split("=")[1] ?? "50",
+    args.find((a) => a.startsWith("--pages="))?.split("=")[1] ?? "500",
     10,
   );
   const categoriesArg = args.find((a) => a.startsWith("--categories="))?.split("=")[1] ?? "all";
@@ -276,8 +276,11 @@ async function main() {
       }
     }
   } else {
+    let pagesWithNoNew = 0;
+    const maxPagesWithNoNew = 3; // остановиться после 3 страниц подряд без новых записей
     for (let page = 0; page < maxPages; page++) {
       const path = `/product/all?page=${page}`;
+      const beforePage = totalImported;
       console.log(`Полный список, страница ${page + 1}/${maxPages}`);
       try {
         const html = await fetchPage(path);
@@ -288,6 +291,15 @@ async function main() {
         }
         for (const row of rows) {
           await upsertRow(row);
+        }
+        if (totalImported === beforePage) {
+          pagesWithNoNew++;
+          if (pagesWithNoNew >= maxPagesWithNoNew) {
+            console.log(`  ${maxPagesWithNoNew} страницы подряд без новых записей, завершение.`);
+            break;
+          }
+        } else {
+          pagesWithNoNew = 0;
         }
         console.log(`  Строк: ${rows.length}, всего импорт: ${totalImported}`);
         if (rows.length < 50) break;
