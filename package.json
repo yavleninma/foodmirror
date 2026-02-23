@@ -1,0 +1,45 @@
+{
+  "name": "foodmirror",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "prepare": "husky",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:migrate:pre-commit": "docker compose run --rm bot npx prisma migrate deploy",
+    "prisma:seed": "tsx prisma/seed.ts",
+    "usda:import": "tsx scripts/import-usda.ts",
+    "usda:enrich": "tsx scripts/enrich-usda.ts",
+    "seed:aliases": "tsx scripts/seed-aliases.ts",
+    "off:import": "tsx scripts/import-off.ts",
+    "start:with-usda": "concurrently -k \"npm run usda:import\" \"npm run start\"",
+    "release:check": "node scripts/check-release.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.2",
+    "dotenv": "^17.3.1",
+    "geo-tz": "^8.1.5",
+    "node-telegram-bot-api": "^0.67.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.11",
+    "@types/node-telegram-bot-api": "^0.64.7",
+    "concurrently": "^9.2.1",
+    "husky": "^9.1.7",
+    "prisma": "^6.19.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "overrides": {
+    "form-data": ">=2.5.4",
+    "qs": ">=6.14.1",
+    "tough-cookie": ">=4.1.3"
+  }
+}

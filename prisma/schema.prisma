@@ -1,0 +1,282 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserState {
+  IDLE
+  DRAFT_MEAL
+  ESTIMATED
+  CONFIRM
+}
+
+enum DraftStatus {
+  DRAFT_MEAL
+  ESTIMATED
+  CONFIRM
+}
+
+enum MessageDirection {
+  IN
+  OUT
+}
+
+enum MessageType {
+  TEXT
+  PHOTO
+  COMMAND
+  CALLBACK
+  SYSTEM
+  OTHER
+}
+
+enum ConfidenceLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ReminderMode {
+  OFF
+  NO_MEALS
+  ALWAYS
+}
+
+model User {
+  id                  Int           @id @default(autoincrement())
+  chatId              String        @unique
+  username            String?       // Telegram @username for admin lookup
+  state               UserState     @default(IDLE)
+  locale              String        @default("ru")
+  lastReminderAt      DateTime?
+  reminderMode        ReminderMode  @default(OFF)
+  reminderHour        Int           @default(20)
+  timezone            String        @default("Europe/Moscow")
+  timezoneSetByUser   Boolean       @default(false) // true after user shared location for timezone
+  lastStatsMessageId  Int?
+  lastErrorMessageId  Int?
+  trialStartedAt         DateTime?
+  subscribedUntil        DateTime?
+  lastPaymentChargeId    String?
+  trialReminderSent7At   DateTime?
+  trialReminderSent3At   DateTime?
+  trialReminderSent1At   DateTime?
+  trialEndReminderSentAt DateTime?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  drafts             DraftMeal[]
+  meals              Meal[]
+  messages           MessageEvent[]
+  freeUsages         FreeUsage[]
+  subscriptionGrants SubscriptionGrant[]
+}
+
+model DraftMeal {
+  id                 Int         @id @default(autoincrement())
+  userId             Int
+  status             DraftStatus @default(DRAFT_MEAL)
+  text               String?
+  photoFileId        String?
+  clarificationCount Int         @default(0)
+  pendingQuestion    String?
+  llmPending         Boolean     @default(false)
+  llmPendingStartedAt DateTime?
+  draftConversation  Json?
+  userOverrides      Json?
+  parsedJson         Json?
+  estimateJson       Json?
+  isRestore          Boolean     @default(false)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+  messageEvents MessageEvent[]
+
+  @@index([userId])
+}
+
+model Meal {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  title       String?
+  text        String?
+  photoFileId String?
+  insight     String?
+  dayKey      String
+
+  kcalMean    Float
+  kcalMin     Float
+  kcalMax     Float
+
+  proteinMean Float
+  proteinMin  Float
+  proteinMax  Float
+
+  fatMean     Float
+  fatMin      Float
+  fatMax      Float
+
+  carbsMean   Float
+  carbsMin    Float
+  carbsMax    Float
+
+  uncertaintyBand Float
+
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  user       User            @relation(fields: [userId], references: [id])
+  components MealComponent[]
+  messageEvents MessageEvent[]
+
+  @@index([userId])
+  @@index([dayKey])
+}
+
+model MealComponent {
+  id                Int             @id @default(autoincrement())
+  mealId            Int
+  foodReferenceId   Int?
+  canonicalName     String
+  displayLabel      String
+  weightMean        Float
+  weightMin         Float
+  weightMax         Float
+  confidence        ConfidenceLevel
+  confidenceReasons Json?
+  createdAt         DateTime        @default(now())
+
+  meal          Meal          @relation(fields: [mealId], references: [id])
+  foodReference FoodReference? @relation(fields: [foodReferenceId], references: [id])
+
+  @@index([mealId])
+  @@index([foodReferenceId])
+}
+
+model FoodReference {
+  id               Int       @id @default(autoincrement())
+  canonicalName    String    @unique
+  displayLabel     String
+  kcalPer100g      Float     @default(0)
+  proteinPer100g   Float
+  fatPer100g       Float
+  carbsPer100g     Float
+  fiberPer100g     Float?
+  sourceId         Int
+  verified         Boolean   @default(true)
+  fdcId            Int?
+  barcode          String?
+  offProductId     String?
+  locale           String?
+  foodCategory     String?
+  portionsJson     Json?
+  nutrientRanges   Json?
+  dataCompleteness Float?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  source     FoodSource      @relation(fields: [sourceId], references: [id])
+  components MealComponent[]
+  aliases    FoodAlias[]
+
+  @@index([fdcId])
+  @@index([barcode])
+}
+
+model FoodAlias {
+  id              Int           @id @default(autoincrement())
+  alias           String
+  locale          String        @default("ru")
+  foodReferenceId Int
+  createdAt       DateTime      @default(now())
+
+  foodReference FoodReference @relation(fields: [foodReferenceId], references: [id], onDelete: Cascade)
+
+  @@unique([alias, locale])
+  @@index([alias])
+  @@index([foodReferenceId])
+}
+
+model FoodSource {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  url       String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  foods FoodReference[]
+}
+
+model FreeUsage {
+  id                   Int      @id @default(autoincrement())
+  userId               Int
+  dayKey               String
+  estimatesUsed        Int      @default(0)
+  confirmsUsed         Int      @default(0)
+  photosUsed           Int      @default(0)
+  estimateRequestsUsed Int      @default(0)
+
+  user User @relation(fields: [userId], references: [id])
+  @@unique([userId, dayKey])
+  @@index([userId])
+}
+
+model SubscriptionGrant {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  grantedUntil DateTime
+  grantedBy    String?
+  reason       String?
+
+  user User @relation(fields: [userId], references: [id])
+  @@index([userId])
+}
+
+/// Ключ-значение для настроек, меняемых без перезапуска (например цена подписки).
+model AppSetting {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+}
+
+/// Лог изменений подписки админом. Все действия админа (grant, setend, revoke) пишутся сюда.
+model SubscriptionAdminLog {
+  id             Int       @id @default(autoincrement())
+  userId         Int
+  action         String    // grant | set_end | revoke
+  previousEnd    DateTime?
+  newEnd         DateTime?
+  adminChatId   String
+  details        String?   // e.g. "30" for grant days, "2025-04-01" for setend
+  createdAt      DateTime  @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model MessageEvent {
+  id                Int              @id @default(autoincrement())
+  userId            Int
+  direction         MessageDirection
+  messageType       MessageType
+  telegramMessageId Int?
+  text              String?
+  photoFileId       String?
+  payloadJson       Json?
+  draftMealId       Int?
+  mealId            Int?
+  createdAt         DateTime         @default(now())
+
+  user      User   @relation(fields: [userId], references: [id])
+  draftMeal DraftMeal? @relation(fields: [draftMealId], references: [id])
+  meal      Meal?  @relation(fields: [mealId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([messageType])
+}

@@ -1,0 +1,1 @@
+ALTER TABLE "User" ALTER COLUMN "reminderMode" SET DEFAULT 'OFF';

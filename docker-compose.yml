@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres:16
+    env_file: .env
+    networks:
+      - app
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-foodmirror}
+      POSTGRES_USER: ${POSTGRES_USER:-fm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-fm} -d ${POSTGRES_DB:-foodmirror}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  usda-import:
+    build: .
+    networks:
+      - app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      TZ: UTC
+      DATABASE_URL: postgresql://${POSTGRES_USER:-fm}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-foodmirror}?schema=public
+      FDC_API_KEY: ${FDC_API_KEY}
+    command: npx tsx scripts/import-usda.ts
+    restart: "no"
+
+  bot:
+    build: .
+    networks:
+      - app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      TZ: UTC
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-fm}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-foodmirror}?schema=public
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ADMIN_CHAT_ID: ${ADMIN_CHAT_ID:-}
+    volumes:
+      - ./logs:/app/logs
+
+  metabase:
+    image: metabase/metabase:latest
+    networks:
+      - app
+    restart: unless-stopped
+    ports:
+      - "3040:3000"
+    environment:
+      MB_JETTY_HOST: 0.0.0.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+networks:
+  app:
+    driver: bridge
+
+volumes:
+  postgres_data:
