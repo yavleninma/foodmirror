@@ -3,7 +3,7 @@ import { getPrice } from "./index";
 
 const INVOICE_TITLE = "Premium на 1 месяц";
 const INVOICE_DESCRIPTION =
-  "Итоги за день, статистика 7/30 дней, напоминания. Оплачивая, вы соглашаетесь с условиями. /terms";
+  "Итоги за день, статистика 7/30 дней, напоминания. Оплачивая, вы соглашаетесь с условиями (кнопка «Условия»).";
 
 export async function sendPremiumInvoice(
   bot: TelegramBot,

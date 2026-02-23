@@ -7,7 +7,7 @@ import type TelegramBot from "node-telegram-bot-api";
 export const awaitingTimezoneLocation = new Set<string>();
 
 export const TIMEZONE_PROMPT_TEXT =
-  "Чтобы «сегодня» и напоминания совпадали с твоим днём, пришли геолокацию (один раз).";
+  "Чтобы «сегодня» и напоминания считались по твоему времени, пришли геолокацию один раз.";
 
 const CANCEL_TEXT = "Отмена";
 

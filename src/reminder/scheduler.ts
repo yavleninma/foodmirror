@@ -158,10 +158,11 @@ export function startReminder(bot: TelegramBot) {
           });
           awaitingTimezoneLocation.add(user.chatId);
         } else {
+          const reminderIntro = "Итог дня по еде можно зафиксировать здесь.";
           await sendLoggedMessage(bot, {
             userId: user.id,
             chatId: user.chatId,
-            text: getRandomQuote(),
+            text: `${reminderIntro}\n\n${getRandomQuote()}`,
             messageType: MessageType.SYSTEM,
           });
         }
