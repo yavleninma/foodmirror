@@ -1869,7 +1869,7 @@ async function persistLlmFoodReference(item: {
 async function estimateDraft(
   bot: TelegramBot,
   chatId: string,
-  draft: { id: number; userId: number; parsedJson?: ParseResult | null },
+  draft: { id: number; userId: number; parsedJson?: ParseResult | null; userOverrides?: unknown },
   conversation: DraftConversationStoredEntry[],
   overrides: UserOverridesMap,
   conversationWithUrls: Array<{
