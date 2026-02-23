@@ -178,7 +178,7 @@ export const config = {
   llm: {
     provider: "openai" as const,
     apiKey: ENV.openaiApiKey,
-    model: "gpt-4o-mini",
+    model: "gpt-5.2", // дефолт по проекту: gpt-5-mini; сменить здесь при смене модели
     timeoutMs: 45000,
     maxCompletionTokens: 1500,
     maxCompletionTokensDraftChat: undefined as number | undefined,

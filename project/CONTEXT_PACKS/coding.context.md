@@ -63,7 +63,7 @@ npm run build          # TypeScript компиляция
 | DATABASE_URL | ✅ | — | PostgreSQL connection string |
 | OPENAI_API_KEY | ✅ | — | Ключ OpenAI |
 | FDC_API_KEY | ✅ (для USDA) | — | Ключ USDA FoodData Central |
-| OPENAI_MODEL | ❌ | gpt-4o-mini | Модель |
+| — | — | — | Модель LLM в `config.llm.model` (gpt-5-mini по умолчанию) |
 | LLM_TIMEOUT_MS | ❌ | 45000 | Таймаут LLM запроса |
 | LLM_MAX_COMPLETION_TOKENS | ❌ | 1500 | Лимит токенов |
 | REMINDER_HOUR | ❌ | 20 | Час напоминания (UTC) |

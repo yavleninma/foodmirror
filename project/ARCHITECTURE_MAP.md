@@ -6,7 +6,7 @@
 | Runtime | Node.js 20 (Alpine) |
 | Язык | TypeScript (strict, ES2020, CommonJS) |
 | БД | PostgreSQL 16, Prisma ORM |
-| LLM | OpenAI API (gpt-4o-mini default), json_schema response format |
+| LLM | OpenAI API (gpt-5-mini default), json_schema response format |
 | Telegram | node-telegram-bot-api (polling) |
 | Аналитика | Metabase (Docker) |
 | Инфра | Docker Compose, DigitalOcean droplet |

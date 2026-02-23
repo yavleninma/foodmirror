@@ -71,21 +71,21 @@
 3. Убедись что код компилируется (`npm run build`)
 
 ### Стиль коммитов
-```
-<тип>: <краткое описание>
-
-Типы: feat, fix, refactor, docs, test, chore
-Примеры:
-  feat: add daily stats comparison
-  fix: protect unmentioned weights in corrections
-  refactor: extract override parsing from handlers
-  docs: update ARCHITECTURE_MAP
-```
+- **Сообщения коммитов только на английском** — кириллица в GitHub/CI отображается сбитой кодировкой.
+- Формат: `<type>: <short description>`
+- Типы: feat, fix, refactor, docs, test, chore, config
+- Примеры:
+  - feat: add daily stats comparison
+  - fix: protect unmentioned weights in corrections
+  - refactor: extract override parsing from handlers
+  - docs: update ARCHITECTURE_MAP
+  - config: LLM model only in config, no OPENAI_MODEL in .env
 
 ---
 
 ## Чеклист перед commit
 
+- [ ] Сообщение коммита на английском
 - [ ] Код компилируется (`npm run build`)
 - [ ] Не добавлены цели/советы/мотивация
 - [ ] Не изменены промпты LLM (если не просили)

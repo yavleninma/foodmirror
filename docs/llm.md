@@ -78,7 +78,7 @@ MealTitle:
 Основные параметры LLM берутся из `src/config.ts` и могут быть переопределены через ENV:
 
 - `OPENAI_API_KEY` — ключ доступа.
-- `OPENAI_MODEL` — модель (по умолчанию `gpt-4o-mini`).
+- Модель LLM задаётся в `src/config.ts` (поле `config.llm.model`). По умолчанию в проекте — `gpt-5-mini`; смена модели — правка конфига, не .env.
 - `LLM_TIMEOUT_MS` — таймаут запроса в мс (дефолт в коде `45000`, в `.env.example` — `90000`).
 - `LLM_MAX_COMPLETION_TOKENS` — лимит токенов ответа (по умолчанию `1500`).
 - `LLM_SYSTEM_PROMPT` — системный промпт.
