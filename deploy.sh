@@ -45,7 +45,7 @@ BACKUP_CRON="0 3 * * * $APP_DIR/scripts/backup-db.sh $APP_DIR/backups"
 if crontab -l 2>/dev/null | grep -q "backup-db.sh"; then
   echo "[deploy] backup cron already present"
 else
-  (crontab -l 2>/dev/null; echo "$BACKUP_CRON") | crontab -
+  (crontab -l 2>/dev/null || true; echo "$BACKUP_CRON") | crontab -
   echo "[deploy] installed backup cron (daily 03:00 -> $APP_DIR/backups)"
 fi
 

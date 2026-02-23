@@ -9,6 +9,12 @@ _Изменения, которые ещё не вошли в релиз._
 
 ---
 
+## [0.1.2] — 2026-02-23
+
+- Deploy: при пустом crontab скрипт не падал с exit 1 (`crontab -l || true` в блоке backup cron)
+
+---
+
 ## [0.1.1] — 2026-02-23
 
 - Проверка CI/CD: первый деплой на droplet после настройки версионности
@@ -24,6 +30,7 @@ _Изменения, которые ещё не вошли в релиз._
 - История (сегодня/вчера/7 дней), вечернее напоминание
 - Справочники: USDA, Open Food Facts, LLM fallback
 
-[Unreleased]: https://github.com/yavleninma/foodmirror/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/yavleninma/foodmirror/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/yavleninma/foodmirror/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/yavleninma/foodmirror/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/yavleninma/foodmirror/releases/tag/v0.1.0
