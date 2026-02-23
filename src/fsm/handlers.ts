@@ -45,11 +45,11 @@ import { isParseResult } from "../llm/validators";
 import {
   formatConfirmSummary,
   formatEstimate,
-  formatEstimateWithEditComponents,
   formatExplainEstimate,
   formatHistorySummary,
   buildMealDeleteButtons,
   buildProductListKeyboard,
+  buildFoundKeyboard,
   buildProductEditKeyboard,
   formatProductEditScreen,
   formatParseSummary,
@@ -58,6 +58,7 @@ import {
   EDIT_WEIGHT_MIN_G,
   EDIT_WEIGHT_MAX_G,
 } from "../telegram/format";
+import type { FoundItemWithIndex } from "../telegram/format";
 import {
   logIncomingMessage,
   sendLoggedMessage,
@@ -624,15 +625,29 @@ function parseNumber(value: string): number | null {
 
 type UserOverridesMap = Record<string, UserOverride>;
 
+const EXCLUDED_INDICES_KEY = "__excludedIndices__";
+
+function getExcludedIndices(raw: unknown): number[] {
+  if (!raw || typeof raw !== "object") return [];
+  const data = raw as Record<string, unknown>;
+  const arr = data[EXCLUDED_INDICES_KEY];
+  if (!Array.isArray(arr)) return [];
+  return arr.filter((x) => typeof x === "number" && Number.isInteger(x) && x >= 0);
+}
+
 function normalizeUserOverrides(raw: unknown): UserOverridesMap {
   if (!raw || typeof raw !== "object") return {};
-  const data = raw as UserOverridesMap;
+  const data = raw as Record<string, unknown>;
   const result: UserOverridesMap = {};
   for (const [key, value] of Object.entries(data)) {
-    if (!key || !value || typeof value !== "object") continue;
-    result[key] = value;
+    if (key === EXCLUDED_INDICES_KEY || !key || !value || typeof value !== "object") continue;
+    result[key] = value as UserOverride;
   }
   return result;
+}
+
+function mergeUserOverridesPayload(overrides: UserOverridesMap, excludedIndices: number[]): Record<string, unknown> {
+  return { ...overrides, [EXCLUDED_INDICES_KEY]: excludedIndices };
 }
 
 function hasMacroOverrides(value: UserOverride | undefined): boolean {
@@ -1432,6 +1447,40 @@ function sortParseByRisk(parse: ParseResult): ParseResult {
   return { ...parse, items };
 }
 
+/** Build sorted "Найдено" display and items with origIndex for remove keyboard. */
+function getFoundDisplayData(
+  parse: ParseResult,
+  overrides: UserOverridesMap,
+  excludedIndices: number[],
+): { sortedParse: ParseResult; foundItems: FoundItemWithIndex[] } {
+  const excludedSet = new Set(excludedIndices);
+  const withOrig: { item: ParsedComponent; origIndex: number }[] = [];
+  for (let i = 0; i < parse.items.length; i++) {
+    if (!excludedSet.has(i)) withOrig.push({ item: parse.items[i], origIndex: i });
+  }
+  const effectiveParse: ParseResult = { ...parse, items: withOrig.map((x) => x.item) };
+  const parsedForDisplay = applyOverridesToParse(effectiveParse, overrides);
+  const origIndices = withOrig.map((x) => x.origIndex);
+  const combined = parsedForDisplay.items.map((item, i) => ({ item, origIndex: origIndices[i] }));
+  const sorted = combined
+    .slice()
+    .sort((a, b) => {
+      const sa = riskScoreForItem(a.item);
+      const sb = riskScoreForItem(b.item);
+      if (sb !== sa) return sb - sa;
+      return a.origIndex - b.origIndex;
+    });
+  const sortedParse: ParseResult = { ...parsedForDisplay, items: sorted.map((x) => x.item) };
+  const foundItems: FoundItemWithIndex[] = sorted.map(({ item, origIndex }) => ({
+    display_label: item.display_label,
+    weight_g_mean: item.weight_g_mean,
+    weight_g_min: item.weight_g_min,
+    weight_g_max: item.weight_g_max,
+    origIndex,
+  }));
+  return { sortedParse, foundItems };
+}
+
 function sortResolvedByRisk(
   resolved: ResolvedComponent[],
 ): ResolvedComponent[] {
@@ -1560,6 +1609,13 @@ function findOverrideForItem(
     if (overrides[""]) return overrides[""];
   }
   return undefined;
+}
+
+function getEffectiveParse(parse: ParseResult, excludedIndices: number[]): ParseResult {
+  if (excludedIndices.length === 0) return parse;
+  const set = new Set(excludedIndices);
+  const items = parse.items.filter((_, i) => !set.has(i));
+  return { ...parse, items };
 }
 
 function applyOverridesToParse(
@@ -1722,10 +1778,18 @@ async function updateDraftConversation(
 async function updateDraftOverrides(
   draftId: number,
   overrides: UserOverridesMap,
+  excludedIndices?: number[],
 ) {
+  const current = await db.draftMeal.findUnique({
+    where: { id: draftId },
+    select: { userOverrides: true },
+  });
+  const currentRaw = current?.userOverrides;
+  const nextExcluded = excludedIndices ?? getExcludedIndices(currentRaw);
+  const payload = mergeUserOverridesPayload(overrides, nextExcluded);
   await db.draftMeal.update({
     where: { id: draftId },
-    data: { userOverrides: overrides },
+    data: { userOverrides: payload },
   });
 }
 
@@ -2140,8 +2204,10 @@ async function estimateDraft(
   });
 
   await recordEstimate(draft.userId);
-  const parseWithOverrides = applyOverridesToParse(adjustedParse, activeOverrides);
-  const estimateText = formatEstimateWithEditComponents(estimate, parseWithOverrides);
+  const excludedIndices = getExcludedIndices(draft.userOverrides);
+  const effectiveParse = getEffectiveParse(adjustedParse, excludedIndices);
+  const parseWithOverrides = applyOverridesToParse(effectiveParse, activeOverrides);
+  const estimateText = formatEstimate(estimate);
   const editKeyboard = buildProductListKeyboard(parseWithOverrides.items);
   const message = await sendLoggedMessage(bot, {
     userId: draft.userId,
@@ -3024,15 +3090,16 @@ export async function handleMessage(
     }
     try {
       const overrides = normalizeUserOverrides(draft.userOverrides);
+      const excludedIndices = getExcludedIndices(draft.userOverrides);
       const parse = draft.parsedJson as ParseResult;
-      const parsedForDisplay = applyOverridesToParse(parse, overrides);
-      const orderedParseForDisplay = sortParseByRisk(parsedForDisplay);
-      const parseSummary = formatParseSummary(orderedParseForDisplay);
+      const { sortedParse, foundItems } = getFoundDisplayData(parse, overrides, excludedIndices);
+      const parseSummary = formatParseSummary(sortedParse);
+      const keyboard = buildFoundKeyboard(foundItems);
       await sendLoggedMessage(bot, {
         userId: user.id,
         chatId,
         text: parseSummary,
-        options: confirmKeyboardMarkup(),
+        options: { reply_markup: { inline_keyboard: keyboard } },
         messageType: "TEXT",
         draftMealId: draft.id,
       });
@@ -3305,16 +3372,17 @@ export async function handleEstimateInlineCallback(
     }
     try {
       const overrides = normalizeUserOverrides(draft.userOverrides);
+      const excludedIndices = getExcludedIndices(draft.userOverrides);
       const parse = draft.parsedJson as ParseResult;
-      const parsedForDisplay = applyOverridesToParse(parse, overrides);
-      const orderedParseForDisplay = sortParseByRisk(parsedForDisplay);
-      const parseSummary = formatParseSummary(orderedParseForDisplay);
+      const { sortedParse, foundItems } = getFoundDisplayData(parse, overrides, excludedIndices);
+      const parseSummary = formatParseSummary(sortedParse);
+      const keyboard = buildFoundKeyboard(foundItems);
       await bot.answerCallbackQuery(query.id);
       await sendLoggedMessage(bot, {
         userId: user.id,
         chatId,
         text: parseSummary,
-        options: confirmKeyboardMarkup(),
+        options: { reply_markup: { inline_keyboard: keyboard } },
         messageType: "TEXT",
         draftMealId: draft.id,
       });
@@ -3325,6 +3393,65 @@ export async function handleEstimateInlineCallback(
       );
       await bot.answerCallbackQuery(query.id, { text: "Ошибка" });
     }
+    return;
+  }
+
+  if (data.startsWith("removecomp:")) {
+    const draft = await getDraft(user.id);
+    if (!draft?.parsedJson) {
+      await bot.answerCallbackQuery(query.id, { text: "Нет активной оценки." });
+      return;
+    }
+    const idxMatch = data.match(/^removecomp:(\d+)$/);
+    if (!idxMatch) {
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    const removeIndex = parseInt(idxMatch[1], 10);
+    const parse = draft.parsedJson as ParseResult;
+    if (removeIndex < 0 || removeIndex >= parse.items.length) {
+      await bot.answerCallbackQuery(query.id, { text: "Неверный компонент" });
+      return;
+    }
+    const overrides = normalizeUserOverrides(draft.userOverrides);
+    const excludedIndices = getExcludedIndices(draft.userOverrides);
+    const newExcluded = [...excludedIndices, removeIndex];
+    await updateDraftOverrides(draft.id, overrides, newExcluded);
+    const effectiveParse = getEffectiveParse(parse, newExcluded);
+    const storedMsgId = estimateMessageByChat.get(chatId);
+    try {
+      const result = await estimateFromParseWithOverrides(effectiveParse, overrides);
+      const estimateText = formatEstimate(result.estimate);
+      const editKeyboard = buildProductListKeyboard(
+        applyOverridesToParse(effectiveParse, overrides).items,
+      );
+      if (storedMsgId) {
+        await bot.editMessageText(estimateText, {
+          chat_id: chatId,
+          message_id: storedMsgId,
+          reply_markup: { inline_keyboard: editKeyboard },
+        });
+      }
+      const { sortedParse, foundItems } = getFoundDisplayData(parse, overrides, newExcluded);
+      const parseSummary = formatParseSummary(sortedParse);
+      const foundKeyboard = buildFoundKeyboard(foundItems);
+      await sendLoggedMessage(bot, {
+        userId: user.id,
+        chatId,
+        text: parseSummary,
+        options: { reply_markup: { inline_keyboard: foundKeyboard } },
+        messageType: "TEXT",
+        draftMealId: draft.id,
+      });
+    } catch (err) {
+      await logError(
+        { scope: "estimate.inline.removecomp", chatId, userId: user.id, draftId: draft.id },
+        err,
+      );
+      await bot.answerCallbackQuery(query.id, { text: "Ошибка" });
+      return;
+    }
+    await bot.answerCallbackQuery(query.id, { text: "Удалено" });
     return;
   }
 
@@ -3366,10 +3493,13 @@ export async function handleEstimateInlineCallback(
       return;
     }
 
+    const excludedIndices = getExcludedIndices(draft.userOverrides);
+    const effectiveParse = getEffectiveParse(parse, excludedIndices);
+
     if (data === "edit:back") {
-      const result = await estimateFromParseWithOverrides(parse, overrides);
-      const parseWithOverrides = applyOverridesToParse(parse, overrides);
-      const text = formatEstimateWithEditComponents(result.estimate, parseWithOverrides);
+      const result = await estimateFromParseWithOverrides(effectiveParse, overrides);
+      const parseWithOverrides = applyOverridesToParse(effectiveParse, overrides);
+      const text = formatEstimate(result.estimate);
       const keyboard = buildProductListKeyboard(parseWithOverrides.items);
       try {
         await bot.editMessageText(text, {
@@ -3387,7 +3517,7 @@ export async function handleEstimateInlineCallback(
     const openMatch = data.match(/^edit:open:(\d+)$/);
     if (openMatch) {
       const itemIdx = parseInt(openMatch[1], 10);
-      const result = await estimateFromParseWithOverrides(parse, overrides);
+      const result = await estimateFromParseWithOverrides(effectiveParse, overrides);
       const compTotals = getComponentEditTotals(result.resolved);
       if (itemIdx < 0 || itemIdx >= compTotals.length) {
         await bot.answerCallbackQuery(query.id, { text: "Неверный компонент" });
@@ -3424,14 +3554,14 @@ export async function handleEstimateInlineCallback(
     const itemIdx = parseInt(fieldMatch[1], 10);
     const field = fieldMatch[2];
     const delta = parseInt(fieldMatch[3], 10);
-    const result = await estimateFromParseWithOverrides(parse, overrides);
+    const result = await estimateFromParseWithOverrides(effectiveParse, overrides);
     const compTotals = getComponentEditTotals(result.resolved);
     if (itemIdx < 0 || itemIdx >= compTotals.length) {
       await bot.answerCallbackQuery(query.id, { text: "Неверный компонент" });
       return;
     }
 
-    const origItem = parse.items[itemIdx];
+    const origItem = effectiveParse.items[itemIdx];
     const key = normalizeOverrideKey(origItem.canonical_name) || normalizeOverrideKey(origItem.display_label);
     const comp = compTotals[itemIdx];
     const current = overrides[key] ?? {};

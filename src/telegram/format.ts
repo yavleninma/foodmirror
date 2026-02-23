@@ -370,29 +370,49 @@ export function formatEstimateWithEditComponents(
 
 const EDIT_WEIGHT_MIN_G = 10;
 const EDIT_WEIGHT_MAX_G = 2000;
-const MAX_EDIT_COMPONENTS = 15;
+const MAX_FOUND_BUTTONS = 15;
 
 type ComponentForList = { display_label: string; weight_g_mean: number | null };
 
-/** Main screen: product list (tap to open edit) + actions */
-export function buildProductListKeyboard(
-  items: ComponentForList[],
+/** Items with original parse index for "Найдено" remove buttons. */
+export type FoundItemWithIndex = {
+  display_label: string;
+  weight_g_mean: number | null;
+  weight_g_min: number | null;
+  weight_g_max: number | null;
+  origIndex: number;
+};
+
+/** Keyboard for "Найдено" screen: one button per product to remove it. */
+export function buildFoundKeyboard(
+  items: FoundItemWithIndex[],
 ): { text: string; callback_data: string }[][] {
   const rows: { text: string; callback_data: string }[][] = [];
-  const limited = items.slice(0, MAX_EDIT_COMPONENTS);
-  for (let i = 0; i < limited.length; i++) {
-    const w = limited[i].weight_g_mean ?? 100;
-    rows.push([{ text: `${limited[i].display_label} — ${Math.round(w)} г`, callback_data: `edit:open:${i}` }]);
+  const limited = items.slice(0, MAX_FOUND_BUTTONS);
+  for (const item of limited) {
+    const w = item.weight_g_mean ?? 100;
+    rows.push([
+      {
+        text: `✕ ${item.display_label} — ${Math.round(w)} г`,
+        callback_data: `removecomp:${item.origIndex}`,
+      },
+    ]);
   }
-  rows.push(
+  return rows;
+}
+
+/** Main screen: only action buttons (product list is in "Найдено"). */
+export function buildProductListKeyboard(
+  _items: ComponentForList[],
+): { text: string; callback_data: string }[][] {
+  return [
     [{ text: "Подтвердить", callback_data: "e:ok" }, { text: "Отмена", callback_data: "e:cancel" }],
     [
       { text: "Почему так?", callback_data: "e:why" },
       { text: "Найдено", callback_data: "e:found" },
       { text: "Уточнения", callback_data: "e:clarify" },
     ],
-  );
-  return rows;
+  ];
 }
 
 /** Message text for product edit submenu. per100g are editable; totals derived. */
