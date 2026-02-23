@@ -500,13 +500,6 @@ export function formatExplainEstimate(resolved: ResolvedComponent[]): string {
     return "Почему так:\nнет данных.";
   }
 
-  function sourceLabel(entry: ResolvedComponent): string {
-    if (entry.sourceLabel === "user") return "пользователь";
-    if (entry.sourceLabel === "llm") return "выдумка ИИ, не точно!";
-    if (entry.usedFallbackReference) return "нет в базе";
-    return entry.reference.source?.name?.trim() ?? "";
-  }
-
   const lines: string[] = ["Почему так:\n"];
   for (const entry of resolved) {
     const reasons: string[] = [];
@@ -561,10 +554,6 @@ export function formatExplainEstimate(resolved: ResolvedComponent[]): string {
     );
     if (reasons.length > 0) {
       lines.push(`Причины: ${reasons.join(", ")}`);
-    }
-    const src = sourceLabel(entry);
-    if (src) {
-      lines.push(`Источник: ${src}`);
     }
     lines.push("");
   }
