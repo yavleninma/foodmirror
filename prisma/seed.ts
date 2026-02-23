@@ -59,6 +59,16 @@ async function main() {
     },
   });
 
+  await db.foodSource.upsert({
+    where: { name: "Calorizator.ru" },
+    update: {},
+    create: {
+      name: "Calorizator.ru",
+      url: "https://calorizator.ru/",
+      notes: "Таблица калорийности продуктов. Приоритет для РФ по геопозиции.",
+    },
+  });
+
   const oldSource = await db.foodSource.findFirst({
     where: { name: "Internal reference (approx)" },
   });

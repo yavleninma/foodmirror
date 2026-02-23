@@ -13,7 +13,7 @@ import { PrismaClient } from "@prisma/client";
 const db = new PrismaClient();
 
 const PROBLEM_SOURCE_NAMES = ["LLM-generated", "Internal fallback"];
-const OPEN_SOURCE_NAMES = ["USDA FoodData Central", "Open Food Facts"];
+const OPEN_SOURCE_NAMES = ["USDA FoodData Central", "Open Food Facts", "Calorizator.ru"];
 
 async function main() {
   const sources = await db.foodSource.findMany({

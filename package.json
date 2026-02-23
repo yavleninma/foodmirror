@@ -1,6 +1,6 @@
 {
   "name": "foodmirror",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "scripts": {
     "dev": "tsx src/index.ts",
@@ -16,11 +16,13 @@
     "usda:enrich": "tsx scripts/enrich-usda.ts",
     "seed:aliases": "tsx scripts/seed-aliases.ts",
     "off:import": "tsx scripts/import-off.ts",
+    "calorizator:import": "tsx scripts/import-calorizator.ts",
     "start:with-usda": "concurrently -k \"npm run usda:import\" \"npm run start\"",
     "release:check": "node scripts/check-release.js"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
+    "cheerio": "^1.2.0",
     "dotenv": "^17.3.1",
     "geo-tz": "^8.1.5",
     "node-telegram-bot-api": "^0.67.0"

@@ -109,6 +109,23 @@ function jaroWinkler(s1: string, s2: string): number {
   return jaro + prefix * 0.1 * (1 - jaro);
 }
 
+// Порядок источников: первый — приоритетный (Calorizator → USDA → OFF → LLM).
+const SOURCE_PRIORITY_ORDER = [
+  "Calorizator.ru",
+  "USDA FoodData Central",
+  "Open Food Facts",
+  "LLM-generated",
+];
+
+function sourcePriority(sourceName: string): number {
+  const i = SOURCE_PRIORITY_ORDER.indexOf(sourceName);
+  return i >= 0 ? i : SOURCE_PRIORITY_ORDER.length;
+}
+
+function preferRef(a: FoodReferenceRow, b: FoodReferenceRow): FoodReferenceRow {
+  return sourcePriority(a.source.name) <= sourcePriority(b.source.name) ? a : b;
+}
+
 export class FoodReferenceResolver {
   private references: FoodReferenceRow[] = [];
   private refMap = new Map<string, FoodReferenceRow>();
@@ -130,30 +147,38 @@ export class FoodReferenceResolver {
     this.refMap.clear();
     this.aliasMap.clear();
 
+    const setRef = (key: string, ref: FoodReferenceRow) => {
+      if (ref.canonicalName === "unknown_generic") return;
+      const existing = this.refMap.get(key);
+      if (!existing) this.refMap.set(key, ref);
+      else this.refMap.set(key, preferRef(ref, existing));
+    };
+
     for (const ref of refs) {
-      this.refMap.set(normalizeName(ref.canonicalName), ref);
-      this.refMap.set(normalizeName(ref.displayLabel), ref);
+      setRef(normalizeName(ref.canonicalName), ref);
+      setRef(normalizeName(ref.displayLabel), ref);
       const translit = transliterate(normalizeName(ref.displayLabel));
-      if (!this.refMap.has(translit)) {
-        this.refMap.set(translit, ref);
-      }
+      const existing = this.refMap.get(translit);
+      if (!existing) this.refMap.set(translit, ref);
+      else if (ref.canonicalName !== "unknown_generic") this.refMap.set(translit, preferRef(ref, existing));
       if (ref.canonicalName === "unknown_generic") {
         this.fallback = ref;
       }
     }
+
+    const setAlias = (key: string, ref: FoodReferenceRow) => {
+      const existing = this.aliasMap.get(key);
+      if (!existing) this.aliasMap.set(key, ref);
+      else this.aliasMap.set(key, preferRef(ref, existing));
+    };
 
     const aliases = await db.foodAlias.findMany({
       include: { foodReference: { include: { source: true } } },
     });
     for (const a of aliases) {
       const key = normalizeName(a.alias);
-      if (!this.aliasMap.has(key)) {
-        this.aliasMap.set(key, a.foodReference);
-      }
-      const translitKey = transliterate(key);
-      if (!this.aliasMap.has(translitKey)) {
-        this.aliasMap.set(translitKey, a.foodReference);
-      }
+      setAlias(key, a.foodReference);
+      setAlias(transliterate(key), a.foodReference);
     }
 
     this.loadedAt = Date.now();
@@ -312,6 +337,8 @@ export class FoodReferenceResolver {
       const bComposite = b.coverage * 0.6 + b.jwScore * 0.4;
       if (bComposite !== aComposite) return bComposite - aComposite;
       if (b.commonCount !== a.commonCount) return b.commonCount - a.commonCount;
+      const prio = sourcePriority(a.ref.source.name) - sourcePriority(b.ref.source.name);
+      if (prio !== 0) return prio;
       return a.ref.displayLabel.length - b.ref.displayLabel.length;
     });
 

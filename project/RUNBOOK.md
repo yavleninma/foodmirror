@@ -60,9 +60,10 @@ docker compose run --rm bot npx prisma db seed
 # 5. Импорт USDA (ОБЯЗАТЕЛЬНО при первом деплое)
 docker compose run --rm usda-import
 
-# 6. Seed алиасов и (опционально) импорт Open Food Facts
+# 6. Seed алиасов и (опционально) импорт справочников
 docker compose run --rm bot npx tsx scripts/seed-aliases.ts
 # docker compose run --rm bot npx tsx scripts/import-off.ts --pages=20
+# docker compose run --rm bot npx tsx scripts/import-calorizator.ts   # Calorizator.ru (приоритет для РФ)
 
 # 7. Запуск бота
 docker compose up -d bot
@@ -83,6 +84,7 @@ npm run prisma:seed
 npm run usda:import       # обязательно
 npm run seed:aliases      # русские алиасы продуктов
 # npm run off:import      # (опционально) импорт Open Food Facts
+# npm run calorizator:import   # (опционально) Calorizator.ru — приоритет для РФ по геопозиции
 npm run dev               # запуск бота
 ```
 
