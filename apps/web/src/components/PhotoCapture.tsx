@@ -7,11 +7,23 @@ interface PhotoCaptureProps {
 }
 
 const PHOTO_MIME_TYPE = 'image/jpeg';
+const CAMERA_CONSTRAINTS: MediaTrackConstraints = {
+  facingMode: { ideal: 'environment' },
+  width: { ideal: 1280, max: 1920 },
+  height: { ideal: 720, max: 1080 },
+  frameRate: { ideal: 30, max: 30 },
+};
+
+function stopStream(stream: MediaStream | null) {
+  if (!stream) return;
+  stream.getTracks().forEach((track) => track.stop());
+}
 
 export function PhotoCapture({ photo, onCapture, className = '' }: PhotoCaptureProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const startRequestIdRef = useRef(0);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -20,16 +32,22 @@ export function PhotoCapture({ photo, onCapture, className = '' }: PhotoCaptureP
     inputRef.current?.click();
   }, []);
 
-  const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
+  const releaseCamera = useCallback(() => {
+    stopStream(streamRef.current);
+    streamRef.current = null;
+
     if (videoRef.current) {
+      videoRef.current.pause();
       videoRef.current.srcObject = null;
     }
     setIsCameraReady(false);
   }, []);
+
+  const stopCamera = useCallback(() => {
+    startRequestIdRef.current += 1;
+    setIsStarting(false);
+    releaseCamera();
+  }, [releaseCamera]);
 
   const readFileAsDataUrl = useCallback((file: Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -48,30 +66,59 @@ export function PhotoCapture({ photo, onCapture, className = '' }: PhotoCaptureP
       return;
     }
 
-    stopCamera();
+    const requestId = ++startRequestIdRef.current;
+    releaseCamera();
     setCameraError(null);
     setIsStarting(true);
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
+        video: CAMERA_CONSTRAINTS,
         audio: false,
       });
-      streamRef.current = stream;
+
+      if (requestId !== startRequestIdRef.current || photo) {
+        stopStream(stream);
+        return;
+      }
+
+      const [videoTrack] = stream.getVideoTracks();
+      if (videoTrack && 'contentHint' in videoTrack) {
+        try {
+          videoTrack.contentHint = 'motion';
+        } catch {
+          // Optional browser hint, ignore unsupported runtimes.
+        }
+      }
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute('playsinline', 'true');
+        videoRef.current.disablePictureInPicture = true;
         await videoRef.current.play();
+      } else {
+        stopStream(stream);
+        return;
       }
 
+      if (requestId !== startRequestIdRef.current || photo) {
+        stopStream(stream);
+        return;
+      }
+
+      streamRef.current = stream;
       setIsCameraReady(true);
     } catch {
       setCameraError('No camera access. You can choose a photo from gallery.');
-      stopCamera();
+      if (requestId === startRequestIdRef.current) {
+        releaseCamera();
+      }
     } finally {
-      setIsStarting(false);
+      if (requestId === startRequestIdRef.current) {
+        setIsStarting(false);
+      }
     }
-  }, [photo, stopCamera]);
+  }, [photo, releaseCamera]);
 
   useEffect(() => {
     if (!photo) {
@@ -82,6 +129,23 @@ export function PhotoCapture({ photo, onCapture, className = '' }: PhotoCaptureP
 
     return () => {
       stopCamera();
+    };
+  }, [photo, startCamera, stopCamera]);
+
+  useEffect(() => {
+    if (photo) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopCamera();
+      } else {
+        void startCamera();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [photo, startCamera, stopCamera]);
 
