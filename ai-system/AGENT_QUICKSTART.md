@@ -87,3 +87,7 @@ npm run test:smoke --workspace=apps/web
 2. `apps/api` тесты зеленые.
 3. `test:smoke` зеленый.
 4. Если менялся пользовательский флоу, обновлен этот quickstart и/или `LOCAL_SETUP.md`.
+
+## Railway test deploy (agents)
+
+Use `ai-system/AGENT_DEPLOY_TEST.md` as the canonical deploy checklist for branch `test`.
