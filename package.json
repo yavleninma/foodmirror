@@ -18,7 +18,7 @@
     "db:migrate": "npm run db:migrate --workspace=apps/api",
     "db:push": "npm run db:push --workspace=apps/api",
     "db:studio": "npm run db:studio --workspace=apps/api",
-    "lint": "tsc --noEmit --project apps/api/tsconfig.json && tsc --noEmit --project apps/web/tsconfig.json",
+    "lint": "npm run build --workspace=packages/shared && tsc --noEmit --project apps/api/tsconfig.json && tsc --noEmit --project apps/web/tsconfig.json",
     "test": "npm run test:api",
     "test:api": "npm run test --workspace=apps/api",
     "test:web": "npm run test --workspace=apps/web",
