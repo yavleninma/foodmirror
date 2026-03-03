@@ -1,7 +1,49 @@
+# Dependencies
 node_modules/
-.env
-.env.*
-!.env.example
+
+# Build output
 dist/
 build/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+!.vscode/extensions.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
 *.log
+npm-debug.log*
+
+# Data (local dev)
+data/
+
+# AI system runtime state
+ai-system/.loop-heartbeat
+ai-system/.adequacy-state.json
+ai-system/.error-tracker.json
+ai-system/.last-rate-limit.json
+ai-system/.orchestrator.lock
+ai-system/.awaiting-answer
+ai-system/BUDGET.json
+ai-system/PAUSE
+
+# Prisma
+apps/api/prisma/migrations/**/migration_lock.toml
+
+# Misc
+*.tgz
+coverage/
+.turbo/
+playwright-report/
+test-results/

@@ -1,0 +1,17 @@
+node_modules
+.git
+.env
+.env.*
+*.md
+!README.md
+dist
+.idea
+.vscode
+reports
+tasks
+scripts
+old
+ai-system
+mini-app
+data
+*.log

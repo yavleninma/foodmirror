@@ -1,0 +1,34 @@
+---
+description: Правила фронтенда — React компоненты, Tailwind, хуки
+globs: apps/web/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Фронтенд — правила
+
+## Компоненты
+
+- Один компонент — один файл, `PascalCase.tsx`
+- UI компоненты: `components/ui/` (Button, Card, Loader)
+- Бизнес-компоненты: `components/` (PhotoCapture, InsightResult)
+- Экраны: `screens/` (MainScreen, HistoryScreen)
+- Props через `interface`, экспорт `export function ComponentName()`
+
+## Стили
+
+- Только Tailwind CSS классы, никаких inline styles
+- CSS переменные для цветов: `var(--color-primary)`, `var(--color-text-secondary)`
+- Определены в `globals.css`
+
+## API
+
+- Весь HTTP через `lib/api.ts` (класс `ApiClient`)
+- Не вызывай `fetch` напрямую в компонентах
+- Ошибки ловить в компоненте, показывать русский текст
+
+## Telegram
+
+- SDK доступен через `hooks/useTelegram.ts`
+- initData устанавливается через `hooks/useApi.ts` → `api.setInitData()`
+- Не обращайся к `window.Telegram` напрямую — используй хук
+- Вне Telegram работаем в guest-mode: оставляем основной флоу, личные функции (история/статистика/цель) скрываем

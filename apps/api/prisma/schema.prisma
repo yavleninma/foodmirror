@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id // Telegram user ID
+  firstName    String?   @map("first_name")
+  lastName     String?   @map("last_name")
+  username     String?
+  goal         String    @default("не расползтись")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  lastActiveAt DateTime  @default(now()) @updatedAt @map("last_active_at")
+  insights     Insight[]
+
+  @@map("users")
+}
+
+model Insight {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id])
+  verdict    String
+  correction String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("insights")
+}

@@ -1,0 +1,37 @@
+---
+description: Общие правила проекта FoodMirror — монорепо, TypeScript, структура
+alwaysApply: true
+---
+
+# FoodMirror — Общие правила
+
+## Проект
+
+FoodMirror — поведенческий инструмент (Telegram Mini App). Фото еды → короткий инсайт → микро-коррекция.
+
+## Структура монорепо
+
+- `apps/api/` — бэкенд (Express 5 + TypeScript + Prisma)
+- `apps/web/` — фронтенд (React 19 + Vite 6 + Tailwind CSS 4)
+- `packages/shared/` — общие типы и константы (`@foodmirror/shared`)
+- `ai-system/` — база знаний агентов
+
+## Обязательно перед работой
+
+1. Прочитай `ai-system/AGENT_QUICKSTART.md` — быстрый контекст
+2. Прочитай `ai-system/CONVENTIONS.md` — правила кода
+3. Прочитай `ai-system/API_SPEC.md` при работе с API
+4. Прочитай `ai-system/DATA_MODEL.md` при работе с БД
+
+## Язык
+
+- Код: TypeScript (strict), English идентификаторы
+- UI тексты: русский
+- Ошибки для пользователя: русский, с действием ("Попробуй ещё раз")
+
+## Команды
+
+- `npm run dev:api` — бэкенд dev сервер
+- `npm run dev:web` — фронтенд dev сервер
+- `npm run build` — полная сборка
+- `npm run db:push` — push Prisma схемы

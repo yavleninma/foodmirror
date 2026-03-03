@@ -1,0 +1,38 @@
+---
+description: Правила бэкенда — Express роуты, Prisma, middleware
+globs: apps/api/**/*.ts
+alwaysApply: false
+---
+
+# Бэкенд — правила
+
+## Роуты
+
+- Один файл на ресурс: `routes/insight.ts`, `routes/history.ts`
+- Экспорт: `export const fooRouter = Router()`
+- Handler: `async (req, res, next) => { try { ... } catch(err) { next(err) } }`
+- Бизнес-логика в `services/`, не в роутах
+
+## Авторизация
+
+- Middleware `requireAuth` из `middleware/auth.ts` выставляет `req.telegramUser` и `req.authMode`
+- Режимы: `telegram`, `guest`, `anonymous`
+- Личные роуты дополнительно защищай `requireTelegramUser`
+- Telegram initData передаётся в `X-Init-Data`, guest-токен в `X-Guest-Token`
+
+## Данные
+
+- Prisma клиент: `import { prisma } from '../lib/prisma.js'`
+- Схема: `prisma/schema.prisma` (не менять без задачи)
+- Upsert для создания/обновления пользователей
+
+## Валидация
+
+- Zod для входящих данных, схема рядом с роутом
+- Ошибка → 400 с русским сообщением
+
+## Ошибки
+
+- 403: "Эта функция доступна только в Telegram."
+- 429: "Слишком много запросов. Подожди минуту." + Retry-After
+- 500: в dev — message, в prod — "Что-то пошло не так."

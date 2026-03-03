@@ -1,0 +1,31 @@
+{
+  "name": "foodmirror",
+  "version": "2.0.0",
+  "private": true,
+  "description": "FoodMirror — поведенческий инструмент: фото еды → короткий инсайт → микро-коррекция",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/api & npm run dev --workspace=apps/web",
+    "dev:api": "npm run build --workspace=packages/shared && npm run dev --workspace=apps/api",
+    "dev:web": "npm run build --workspace=packages/shared && npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/api && npm run build --workspace=apps/web",
+    "build:api": "npm run build --workspace=apps/api",
+    "build:web": "npm run build --workspace=apps/web",
+    "start": "npm run start --workspace=apps/api",
+    "db:migrate": "npm run db:migrate --workspace=apps/api",
+    "db:push": "npm run db:push --workspace=apps/api",
+    "db:studio": "npm run db:studio --workspace=apps/api",
+    "lint": "tsc --noEmit --project apps/api/tsconfig.json && tsc --noEmit --project apps/web/tsconfig.json",
+    "test": "npm run test:api",
+    "test:api": "npm run test --workspace=apps/api",
+    "test:web": "npm run test --workspace=apps/web",
+    "test:smoke": "npm run test:smoke --workspace=apps/web",
+    "ci": "npm run lint && npm run build && npm run test:api && npm run test:web && npm run test:smoke"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
