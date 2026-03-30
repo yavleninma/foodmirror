@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>foodmirror</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg-start: #fff4d6;
+        --bg-end: #ffd8c2;
+        --card: rgba(255, 255, 255, 0.82);
+        --text: #1b130f;
+        --accent: #ef6c3d;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background:
+          radial-gradient(circle at top, rgba(255, 255, 255, 0.75), transparent 40%),
+          linear-gradient(135deg, var(--bg-start), var(--bg-end));
+        color: var(--text);
+        font-family: Georgia, "Times New Roman", serif;
+      }
+
+      main {
+        width: min(680px, 100%);
+        padding: 56px 32px;
+        border-radius: 28px;
+        background: var(--card);
+        border: 1px solid rgba(27, 19, 15, 0.08);
+        box-shadow: 0 24px 80px rgba(60, 29, 14, 0.14);
+        text-align: center;
+        backdrop-filter: blur(10px);
+      }
+
+      p {
+        margin: 0 0 16px;
+        font-size: 0.9rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: rgba(27, 19, 15, 0.65);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(3rem, 12vw, 6rem);
+        line-height: 0.95;
+      }
+
+      h1 span {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p>foodmirror</p>
+      <h1>Hello <span>world</span></h1>
+    </main>
+  </body>
+</html>

@@ -1,3 +1,3 @@
 # foodmirror
 
-Minimal clean start for the new `main` branch.
+Minimal Vercel-ready starter with a single Hello World page.
