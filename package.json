@@ -1,5 +1,12 @@
 {
   "name": "foodmirror",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "description": "FoodMirror MVP for meal photo logging with Vercel serverless APIs",
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "redis": "^4.7.0"
+  }
 }
