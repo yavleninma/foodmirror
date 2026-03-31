@@ -267,7 +267,7 @@ a:hover {
 .sign-shell {
   min-height: 100vh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .sign-card,
@@ -293,6 +293,7 @@ a:hover {
 
 .sign-grid {
   margin-top: 22px;
+  align-items: start;
 }
 
 .sign-copy h1,
@@ -307,7 +308,11 @@ a:hover {
   letter-spacing: -0.04em;
 }
 
-.sign-copy h1,
+.sign-copy h1 {
+  font-size: clamp(1.95rem, 8vw, 3.5rem);
+  line-height: 0.98;
+}
+
 .hero-copy h1,
 .section-head h1 {
   font-size: clamp(2.2rem, 9vw, 4.5rem);
@@ -332,7 +337,16 @@ a:hover {
   line-height: 1.55;
 }
 
+.sign-actions {
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(16, 23, 35, 0.06);
+  align-content: start;
+}
+
 .step-strip {
+  grid-column: 1 / -1;
   grid-template-columns: 1fr;
 }
 
@@ -767,6 +781,10 @@ a:hover {
   .editor-body {
     grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
     align-items: start;
+  }
+
+  .sign-shell {
+    align-items: center;
   }
 
   .step-strip {

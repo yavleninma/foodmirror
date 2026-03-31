@@ -4,13 +4,13 @@ const GUIDE_KEY = 'foodmirror.v1.guideSeen';
 const I18N = {
   ru: {
     appName: 'FoodMirror',
-    signInEyebrow: 'Telegram-first food log',
+    signInEyebrow: 'Быстрый вход через Telegram',
     signInTitle: 'Сфоткал. Проверил. Сохранил день.',
     signInCopy: 'Один аккаунт работает в боте, Mini App и вебе. Telegram нужен только для быстрого и безопасного входа.',
     signInFlow: 'Фото еды превращается в черновик с ккал и БЖУ, а ты быстро подтверждаешь результат.',
     signInTelegram: 'Войти через Telegram',
     signInWeb: 'Локальный dev-вход',
-    signInDevLabel: 'Dev only',
+    signInDevLabel: 'Для dev',
     profileName: 'Имя пользователя',
     continue: 'Продолжить',
     logout: 'Выйти',
@@ -95,7 +95,8 @@ const I18N = {
     saveAndClose: 'Сохранить',
     timelineDate: 'Выбранный день',
     firstStepLabel: 'Сценарий первого запуска'
-  },  en: {
+  },
+  en: {
     appName: 'FoodMirror',
     signInEyebrow: 'Telegram-first food log',
     signInTitle: 'Snap it. Review it. Save the day.',
@@ -206,7 +207,8 @@ const state = {
   editorOpen: false,
   pendingDraftId: null,
   guideDismissed: localStorage.getItem(GUIDE_KEY) === '1',
-  authToken: new URLSearchParams(location.search).get('auth')
+  authToken: new URLSearchParams(location.search).get('auth'),
+  authReady: false
 };
 
 const root = document.querySelector('#app');
@@ -242,6 +244,7 @@ async function bootstrapAuth() {
     state.session = sessionResponse.session || null;
     state.botLoginUrl = sessionResponse.botLoginUrl || null;
     state.allowWebSignin = Boolean(sessionResponse.allowWebSignin);
+    state.authReady = true;
 
     if (state.session) {
       await refreshData();
@@ -252,6 +255,7 @@ async function bootstrapAuth() {
   }
 
   state.loading = false;
+  state.authReady = true;
   render();
 }
 
@@ -291,9 +295,9 @@ function render() {
   document.body.classList.toggle('overlay-open', Boolean(state.editorOpen));
 
   if (!state.session) {
-    root.innerHTML = signInScreen(t);
+    root.innerHTML = state.authReady ? signInScreen(t) : signInLoadingScreen(t);
     bindShared();
-    bindSignIn();
+    if (state.authReady) bindSignIn();
     return;
   }
 
@@ -351,6 +355,40 @@ function renderScreen(day, stats, weights, calendar, recent, t) {
   if (state.screen === 'profile') return profileScreen(stats, weights, t);
   return homeScreen(day, recent, t);
 }
+function signInLoadingScreen(t) {
+  return `
+    <div class="sign-shell">
+      <section class="sign-card">
+        <div class="sign-head">
+          <div class="brand-block">
+            <div class="brand-mark"></div>
+            <div class="brand-copy">
+              <span>${escapeHtml(t.appName)}</span>
+              <strong>${escapeHtml(t.signInEyebrow)}</strong>
+            </div>
+          </div>
+          <div class="lang-toggle">
+            <button class="${state.lang === 'ru' ? 'active' : ''}" data-lang="ru">RU</button>
+            <button class="${state.lang === 'en' ? 'active' : ''}" data-lang="en">EN</button>
+          </div>
+        </div>
+
+        <div class="sign-grid">
+          <div class="sign-copy">
+            <p class="eyebrow">${escapeHtml(t.firstStepLabel)}</p>
+            <h1>${escapeHtml(t.signInTitle)}</h1>
+            <p class="lead-text">${escapeHtml(t.signInCopy)}</p>
+          </div>
+          <div class="section-panel empty-panel">
+            <p>${escapeHtml(t.loading)}</p>
+            <div class="loading-line"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
 function signInScreen(t) {
   return `
     <div class="sign-shell">
@@ -375,12 +413,6 @@ function signInScreen(t) {
             <h1>${escapeHtml(t.signInTitle)}</h1>
             <p class="lead-text">${escapeHtml(t.signInCopy)}</p>
             <p class="support-text">${escapeHtml(t.signInFlow)}</p>
-
-            <div class="step-strip">
-              ${stepPill(1, t.guideStep1)}
-              ${stepPill(2, t.guideStep2)}
-              ${stepPill(3, t.guideStep3)}
-            </div>
           </div>
 
           <div class="sign-actions">
@@ -401,6 +433,12 @@ function signInScreen(t) {
                 </form>
               </div>
             ` : ''}
+          </div>
+
+          <div class="step-strip">
+            ${stepPill(1, t.guideStep1)}
+            ${stepPill(2, t.guideStep2)}
+            ${stepPill(3, t.guideStep3)}
           </div>
         </div>
       </section>
@@ -629,7 +667,7 @@ function draftEditor(t) {
       <div class="editor-backdrop" data-action="close-editor"></div>
       <section class="editor-panel">
         <header class="editor-header">
-          <button class="ghost-button icon-button" data-action="close-editor" aria-label="${escapeAttribute(t.close)}">Ã—</button>
+          <button class="ghost-button icon-button" data-action="close-editor" aria-label="${escapeAttribute(t.close)}">&times;</button>
           <div class="editor-title">
             <span class="small-label">${escapeHtml(sourceLabel(draft.source, t))}</span>
             <h2>${escapeHtml(title)}</h2>
